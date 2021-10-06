@@ -66,12 +66,12 @@ export class Immer implements ProducersFns {
 	produce: IProduce = (base: any, recipe?: any, patchListener?: any) => {
 		// curried invocation
 		if (typeof base === "function" && typeof recipe !== "function") {
-			const defaultBase = recipe
+			const defaultBase = recipe // Usually, it's `undefined`
 			recipe = base
 
 			const self = this
 			return function curriedProduce(
-				this: any,
+				this: any, // Keep the caller context. It's TS syntax, when it's compiled to JS, the first `this` is eliminated.
 				base = defaultBase,
 				...args: any[]
 			) {
@@ -87,6 +87,7 @@ export class Immer implements ProducersFns {
 
 		// Only plain objects, arrays, and "immerable classes" are drafted.
 		if (isDraftable(base)) {
+			// The scope object is used to collect the patches.
 			const scope = enterScope(this)
 			const proxy = createProxy(this, base, undefined)
 			let hasError = true
@@ -98,6 +99,7 @@ export class Immer implements ProducersFns {
 				if (hasError) revokeScope(scope)
 				else leaveScope(scope)
 			}
+			// We can return a promise.
 			if (typeof Promise !== "undefined" && result instanceof Promise) {
 				return result.then(
 					result => {
@@ -113,8 +115,12 @@ export class Immer implements ProducersFns {
 			usePatchesInScope(scope, patchListener)
 			return processResult(result, scope)
 		} else if (!base || typeof base !== "object") {
+			// The init state is primitive value.
 			result = recipe(base)
+			// We can return NOTHING when we want undefined.
 			if (result === NOTHING) return undefined
+			// If we don't return anything(the same as returning undefined), it means
+			// that we did nothing and we want the original value.
 			if (result === undefined) result = base
 			if (this.autoFreeze_) freeze(result, true)
 			return result
