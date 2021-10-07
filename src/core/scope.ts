@@ -49,6 +49,12 @@ export function usePatchesInScope(
 	scope: ImmerScope,
 	patchListener?: PatchListener
 ) {
+	/**
+	 * If we have `patchListener`, then we init `patches`
+	 * and `inversePatches` as empty array. Thus, if one
+	 * of them is not undefined, then all of them are not
+	 * undefined.
+	 */
 	if (patchListener) {
 		getPlugin("Patches") // assert we have the plugin
 		scope.patches_ = []

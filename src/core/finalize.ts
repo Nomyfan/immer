@@ -19,13 +19,34 @@ import {
 	shallowCopy
 } from "../internal"
 
+/**
+ * Process the result returned by `recipe` function. What type can it be?
+ * It can be a primitive value, new plain object, NOTHING, or the `draft` argument.
+ * @see https://immerjs.github.io/immer/return
+ * @param result
+ * @param scope
+ * @returns Any value immutable. If it's object, it's frozen.
+ */
 export function processResult(result: any, scope: ImmerScope) {
+	// This is a counter which will count down to zero in `finalize` function.
 	scope.unfinalizedDrafts_ = scope.drafts_.length
+	/**
+	 * When we call `createProxy`, we create the draft and
+	 * push it into `drafts_`.
+	 */
 	const baseDraft = scope.drafts_![0]
+	/**
+	 * `isReplaced` means that `recipe` returns a new state instead of
+	 * mutating the `draft` object.
+	 */
 	const isReplaced = result !== undefined && result !== baseDraft
 	if (!scope.immer_.useProxies_)
 		getPlugin("ES5").willFinalizeES5_(scope, result, isReplaced)
 	if (isReplaced) {
+		/**
+		 * We cannot modify the draft and return a new state.
+		 * It doesn't make sense to do that.
+		 */
 		if (baseDraft[DRAFT_STATE].modified_) {
 			revokeScope(scope)
 			die(4)
@@ -49,6 +70,12 @@ export function processResult(result: any, scope: ImmerScope) {
 	}
 	revokeScope(scope)
 	if (scope.patches_) {
+		/**
+		 * If `patches_` is not undefined, then `inversePatches_`
+		 * and `patchListener_` are not undefined too. It's ensured
+		 * by `usePatchesInScope`. Every time we call `processResult`,
+		 * we must call `usePatchesInScope` first.
+		 */
 		scope.patchListener_!(scope.patches_, scope.inversePatches_!)
 	}
 	return result !== NOTHING ? result : undefined
@@ -65,7 +92,7 @@ function finalize(rootScope: ImmerScope, value: any, path?: PatchPath) {
 			value,
 			(key, childValue) =>
 				finalizeProperty(rootScope, state, value, key, childValue, path),
-			true // See #590, don't recurse into non-enumarable of non drafted objects
+			true // See #590, don't recurse into non-enumerable of non drafted objects
 		)
 		return value
 	}

@@ -140,7 +140,7 @@ export class Immer implements ProducersFns {
 			 * type Nothing = typeof nothing;
 			 *
 			 * const value = produce(123 as number | Nothing, (draft) => {
-			 * 	draft = 87;
+			 * 	draft = 87; // redeclare, see https://immerjs.github.io/immer/return
 			 * });
 			 *
 			 * console.log(value); // 123
