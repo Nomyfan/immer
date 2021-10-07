@@ -117,10 +117,34 @@ export class Immer implements ProducersFns {
 		} else if (!base || typeof base !== "object") {
 			// The init state is primitive value.
 			result = recipe(base)
-			// We can return NOTHING when we want undefined.
+			/**
+			 * We can return NOTHING when we want undefined.
+			 * For example:
+			 *
+			 * import {nothing, produce} from 'immer';
+			 * type Nothing = typeof nothing;
+			 *
+			 * const value = produce(123 as number | Nothing, (draft) => {
+			 * 	return nothing;
+			 * });
+			 *
+			 * console.log(value); // undefined
+			 */
 			if (result === NOTHING) return undefined
-			// If we don't return anything(the same as returning undefined), it means
-			// that we did nothing and we want the original value.
+			/**
+			 * If we don't return anything(the same as returning undefined), it means
+			 * that we did nothing and we want the original value.
+			 * For example:
+			 *
+			 * import {nothing, produce} from 'immer';
+			 * type Nothing = typeof nothing;
+			 *
+			 * const value = produce(123 as number | Nothing, (draft) => {
+			 * 	draft = 87;
+			 * });
+			 *
+			 * console.log(value); // 123
+			 */
 			if (result === undefined) result = base
 			if (this.autoFreeze_) freeze(result, true)
 			return result
