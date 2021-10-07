@@ -151,18 +151,57 @@ export class Immer implements ProducersFns {
 		} else die(21, base)
 	}
 
+	/**
+	 * It's just a sugar for `produce` with patch listener.
+	 * However, if our recipe is a Promise, we should call
+	 * `produce` directly to collect patches by ourselves.
+	 * @param arg1
+	 * @param arg2
+	 * @param arg3
+	 * @returns
+	 */
 	produceWithPatches: IProduceWithPatches = (
 		arg1: any,
 		arg2?: any,
 		arg3?: any
 	): any => {
 		if (typeof arg1 === "function") {
+			const recipe = arg1
 			return (state: any, ...args: any[]) =>
-				this.produceWithPatches(state, (draft: any) => arg1(draft, ...args))
+				this.produceWithPatches(state, (draft: any) => recipe(draft, ...args))
 		}
 
 		let patches: Patch[], inversePatches: Patch[]
-		const nextState = this.produce(arg1, arg2, (p: Patch[], ip: Patch[]) => {
+		const base = arg1
+		const recipe = arg2
+		// What if the recipe is a Promise? In this case, the patch listener
+		// will be called after the promise is resolved.
+		// For example:
+		// import { produceWithPatches, enablePatches } from "immer";
+
+		// enablePatches();
+		// const state = [1, 2, 3];
+
+		// const [nextState, patches, inversePatches] = produceWithPatches(
+		// 	state,
+		// 	async (draft) => {
+		// 		await new Promise((res) =>
+		// 			setTimeout(() => {
+		// 				res(1);
+		// 			}, 1000)
+		// 		);
+
+		// 		draft.push(123);
+		// 	}
+		// );
+
+		// nextState.then((v) => {
+		// 	console.log(v, patches, inversePatches); // [1,2,3,123] undefined undefined
+		// });
+
+		// If we really need a Promise recipe and get the patches, we just use
+		// produce and pass a listener to it to collect patches by ourselves.
+		const nextState = this.produce(base, recipe, (p: Patch[], ip: Patch[]) => {
 			patches = p
 			inversePatches = ip
 		})
